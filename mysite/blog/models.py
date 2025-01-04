@@ -12,8 +12,7 @@ class PublishedManager(models.Manager):
 
 
 class Post(models.Model):
-    object = models.Manager()
-    published = PublishedManager()
+
 
     class Status(models.TextChoices):
         DRAFT = 'DF', 'Draft'
@@ -36,6 +35,8 @@ class Post(models.Model):
         choices=Status,
         default=Status.DRAFT
     )
+    objects = models.Manager()
+    published = PublishedManager()
 
 
     class Meta:
