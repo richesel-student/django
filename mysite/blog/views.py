@@ -2,10 +2,37 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import ListView
 
+
+from .forms import EmailPostForm
 from .models import Post
 from django.http import Http404
 
 # Create your views here.
+
+
+def post_share(request, post_id):
+# Извлечь пост по идентификатору id 
+    post = get_object_or_404(
+    Post,
+    id=post_id,
+    status=Post.Status.PUBLISHED
+    )
+    if request.method == 'POST':
+# Форма была передана на обработку 
+        form = EmailPostForm(request.POST)
+        if form.is_valid():
+# Поля формы успешно прошли валидацию
+           cd = form.cleaned_data
+# ... отправить электронное письмо
+    else:
+        form = EmailPostForm()
+    return render( 
+        request,
+        'blog/post/share.html', {
+        'post': post,
+        'form': form 
+        }
+    )
 
 
 def post_list(reqest):
