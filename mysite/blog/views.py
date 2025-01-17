@@ -7,35 +7,60 @@ from .forms import CommentForm, EmailPostForm
 from .models import Post
 from django.http import Http404
 from taggit.models import Tag
+from django.db.models import Count
 # Create your views here.
 
-
-def post_list(reqest, tag_slug=None):
+#заменл
+# def post_list(request, tag_slug=None):
+#     post_list = Post.published.all()
+#     tag = None
+#     if tag_slug:
+#         tag = get_object_or_404(Tag, slug=tag_slug)
+#         post_list = post_list.filter(tags__in=[tag])
+#     # Построение разбивки с 3 постами на странице
+#     paginator = Paginator(post_list, 3)
+#     page_number = request.GET.get('page', 1)
+#
+#     try:
+#         posts = paginator.page(page_number)
+#
+#     except PageNotAnInteger:
+#         posts = paginator.page(1)
+#     except EmptyPage:
+#         posts = paginator.page(paginator.num_pages)
+#
+#     return render(
+#         request,
+#         'blog/post/list.html',
+#         {'posts' : posts,
+#          'tag':tag,
+#          }
+#     )
+def post_list(request, tag_slug=None):
     post_list = Post.published.all()
-    tag =None
+    tag = None
     if tag_slug:
         tag = get_object_or_404(Tag, slug=tag_slug)
         post_list = post_list.filter(tags__in=[tag])
-    # Построение разбивки с 3 постами на странице
+    # Pagination with 3 posts per page
     paginator = Paginator(post_list, 3)
-    page_number = reqest.GET.get('page', 1)
-    
+    page_number = request.GET.get('page', 1)
     try:
         posts = paginator.page(page_number)
-
     except PageNotAnInteger:
+        # If page_number is not an integer get the first page
         posts = paginator.page(1)
     except EmptyPage:
+        # If page_number is out of range get last page of results
         posts = paginator.page(paginator.num_pages)
-
     return render(
-        reqest,
+        request,
         'blog/post/list.html',
-        {'posts' : posts,
-         'tag':tag
-         }
+        {
+            'posts': posts,
+            'tag': tag
+        }
     )
-
 
 def post_detail(request, year, month, day, post):
     post = get_object_or_404(
@@ -49,11 +74,21 @@ def post_detail(request, year, month, day, post):
     comments=post.comments.filter(activate=True)
     form = CommentForm()
 
+    post_tags_ids = post.tags.values_list('id', flat=True)
+    similar_posts = Post.published.filter(
+        tags__in=post_tags_ids
+    ).exclude(id=post.id)
+    similar_posts = similar_posts.annotate(
+        same_tags=Count('tags')
+    ).order_by('-same_tags', '-publish')[:4]
+
+
     return render(request,'blog/post/detail.html',
 {
             'post' : post,
             'comments': comments,
-            'form': form
+            'form': form,
+            'similar_posts': similar_posts
         }
     )
 
@@ -61,7 +96,8 @@ class PostListView(ListView):
     queryset = Post.published.all()
     context_object_name = 'posts'
     paginate_by = 3
-    template_name = 'blog/post/list.html' 
+    template_name = 'blog/post/list.html'
+#/Users/rinatdevlikamov/PycharmProjects/PythonProject2/django/mysite/blog/templates/blog/latest_posts.html
 
 def post_share(request, post_id):
     # Retrieve post by id
